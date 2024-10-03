@@ -1,0 +1,10 @@
+# secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-sc-secret
+  namespace: nginx
+type: Opaque
+data:
+  azurestorageaccountname: c3RncnZzcnZscw==
+  azurestorageaccountkey: Yk1MMW10RnZxRkIxck4xT00vSGRKeVQzNVVnR2J5cHF0RnJwM0dqemdqaDZXZHNLd0J5RDJsWWx5ZDdaZ1RCYzAxKytvK1loT3FMbitBU3QyK2REQWc9PQ==
