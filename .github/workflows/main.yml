@@ -1,0 +1,50 @@
+name: Deploy to AKS using ArgoCD
+
+on:
+  push:
+    branches:
+      - main  # Triggers the workflow when pushing changes to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up kubectl (if you want to use kubectl for interaction with AKS)
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0' # Use your required version
+
+      # Step 3: Install the ArgoCD CLI
+      - name: Install ArgoCD CLI
+        run: |
+          sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/v2.8.1/argocd-linux-amd64
+          sudo chmod +x /usr/local/bin/argocd
+
+      # Step 4: Authenticate to AKS
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Store your Azure Service Principal credentials in GitHub Secrets
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group <your-resource-group> --name <your-aks-cluster> --overwrite-existing
+
+      # Step 5: Authenticate to ArgoCD
+      - name: ArgoCD Login
+        run: |
+          argocd login <your-argocd-server> \
+            --username ${{ secrets.ARGOCD_USERNAME }} \
+            --password ${{ secrets.ARGOCD_PASSWORD }} \
+            --insecure
+
+      # Step 6: Sync ArgoCD with the repository (trigger a deployment)
+      - name: Sync ArgoCD Application
+        run: |
+          argocd app sync <your-app-name>  # Replace with your actual ArgoCD app name
