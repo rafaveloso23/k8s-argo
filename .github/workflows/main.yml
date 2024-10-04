@@ -1,50 +1,30 @@
-name: Deploy to AKS using ArgoCD
+name: Build and Push Docker Image
 
 on:
   push:
     branches:
-      - main  # Triggers the workflow when pushing changes to the main branch
+      - main  # Triggers the workflow when changes are pushed to the main branch
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository code
+      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up kubectl (if you want to use kubectl for interaction with AKS)
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.28.0' # Use your required version
-
-      # Step 3: Install the ArgoCD CLI
-      - name: Install ArgoCD CLI
+      # Log in to Azure Container Registry
+      - name: Log in to Azure Container Registry
         run: |
-          sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/v2.8.1/argocd-linux-amd64
-          sudo chmod +x /usr/local/bin/argocd
+          echo "${{ secrets.AZURE_CREDENTIALS }}" | docker login ${{ secrets.ACR_NAME }}.azurecr.io --username ${{ secrets.ACR_USERNAME }} --password-stdin
 
-      # Step 4: Authenticate to AKS
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Store your Azure Service Principal credentials in GitHub Secrets
-
-      - name: Get AKS credentials
+      # Build the Docker image (retrieves image name from secrets)
+      - name: Build Docker Image
         run: |
-          az aks get-credentials --resource-group <your-resource-group> --name <your-aks-cluster> --overwrite-existing
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.DOCKER_IMAGE_NAME }}:${{ github.sha }} ./docker-image
 
-      # Step 5: Authenticate to ArgoCD
-      - name: ArgoCD Login
+      # Push the Docker image to ACR
+      - name: Push Docker Image to ACR
         run: |
-          argocd login <your-argocd-server> \
-            --username ${{ secrets.ARGOCD_USERNAME }} \
-            --password ${{ secrets.ARGOCD_PASSWORD }} \
-            --insecure
-
-      # Step 6: Sync ArgoCD with the repository (trigger a deployment)
-      - name: Sync ArgoCD Application
-        run: |
-          argocd app sync <your-app-name>  # Replace with your actual ArgoCD app name
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.DOCKER_IMAGE_NAME }}:${{ github.sha }}
