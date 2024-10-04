@@ -21,7 +21,7 @@ jobs:
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Build Docker image
-        working-directory: docker-image  # Specify the directory where the Dockerfile is located
+        working-directory: docker-images  # Specify the directory where the Dockerfile is located
         run: |
           docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/appnginx:latest .
 
