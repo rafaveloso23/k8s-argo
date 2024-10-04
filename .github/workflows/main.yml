@@ -1,30 +1,35 @@
-name: Build and Push Docker Image
+name: Build and Deploy to ACR
 
 on:
   push:
     branches:
-      - main  # Triggers the workflow when changes are pushed to the main branch
+      - main  # Change this to your desired branch
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      # Log in to Azure Container Registry
-      - name: Log in to Azure Container Registry
-        run: |
-          echo "${{ secrets.AZURE_CREDENTIALS }}" | docker login ${{ secrets.ACR_NAME }}.azurecr.io --username ${{ secrets.ACR_USERNAME }} --password-stdin
+      - name: Set up Azure CLI
+        uses: azure/setup-azure-cli@v1
+        with:
+          azure-cli-version: '2.64.0'  # Specify your desired Azure CLI version
 
-      # Build the Docker image (retrieves image name from secrets)
-      - name: Build Docker Image
+      - name: Login to Azure
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.DOCKER_IMAGE_NAME }}:${{ github.sha }} ./docker-image
+          az login --service-principal --username ${{ secrets.AZURE_CREDENTIALS_CLIENT_ID }} --password ${{ secrets.AZURE_CREDENTIALS_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_CREDENTIALS_TENANT_ID }}
 
-      # Push the Docker image to ACR
-      - name: Push Docker Image to ACR
+      - name: Login to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build Docker image
+        working-directory: docker-image  # Specify the directory where the Dockerfile is located
         run: |
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/appnginx:latest .
+
+      - name: Push Docker image to ACR
+        run: |
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/appnginx:latest
